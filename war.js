@@ -1,13 +1,6 @@
 // the main js code called by Jquery on doc ready
 $(document).ready (function() {
-    
-    // NEXT: see if you can update the button. go to battle, go to war,
-    // play again, and have it greyed out while the text is loading
-    // maybe create a new function, next(), that determines which action is
-    // required of the user. the text is easy to change inside the game.
-    // maybe var state = "battle" "war" "start" "waiting"
-    
-    
+
     // define the Card constructor
     var Card = function(name, suit) {
         this.name = name;
@@ -143,6 +136,10 @@ $(document).ready (function() {
     var pot;
     var results = "";
     var gameOver = false;
+    var state = "battle";
+    var battleCry = "battle";
+    var warCry = "Go to War";
+    var newCry = "Play Again";
 
 
     // this is for starting a new game
@@ -153,12 +150,65 @@ $(document).ready (function() {
         cardsInPlay = {};
         results = "";
         gameOver = false;
+        dealCards();
+        printNotification("The cards have been dealt!", 1);
+        unfadeButton("battle");
+        printNumCards();
+    }
+    
+    // determines what needs to happen when the user clicks the button
+    function next() {
+        if (state == "battle") {
+            fadeButton();
+            doBattle();
+        } else if (state == "war") {
+            fadeButton();
+            goToWar();
+        } else if (state == "start") {
+            fadeButton();
+            newGame();
+        } else {
+            // it's in waiting mode. do nothing.
+        }
+    }
+    
+    function fadeButton() {
+        state = "waiting";
+        document.getElementById("next").style.border = "1px solid #aaa";
+        document.getElementById("next").style.color = "#aaa";
+    }
+    
+    function unfadeButton(newState) {
+        $('BODY').queue(function() {
+            document.getElementById("next").style.border = "1px solid #000";
+            document.getElementById("next").style.color = "#000";
+            if (newState == "battle") {
+                if ($("#next").text() != battleCry) {
+                    $("#next").fadeOut(500, function() {
+                        $(this).text(battleCry).fadeIn(500);
+                    });
+                }
+             } else if (newState == "war") {
+                if ($("#next").text() != warCry) {
+                    $("#next").fadeOut(500, function() {
+                        $(this).text(warCry).fadeIn(500);
+                    });
+                }
+             } else if (newState == "start") {
+                $("#next").fadeOut(500, function() {
+                    $(this).text(newCry).fadeIn(500);
+                });
+            }
+            state = newState;
+            $('BODY').dequeue();
+        });
     }
     
     function dealCards() {
+        player2.take(deck.draw());
         while(deck.notEmpty()) {
             player1.take(deck.draw());
-            player2.take(deck.draw());
+            
         }
     }
     
@@ -173,10 +223,16 @@ $(document).ready (function() {
         while (num > 0) {
             if (player.loses()) {
                 gameOver = true;
+                printNumCards();
                 printLosingMessage(player);
                 num = 0;
             } else {
                 cardsInPlay[player.name].take(player.playCard());
+                if (num > 1) {
+                    printNotification(player.name + " lays one card face down.");
+                } else {
+                    printNotification(player.name + " plays " + cardsInPlay[player.name].recentCard().description());
+                }
                 num--;
             }
         }
@@ -193,8 +249,10 @@ $(document).ready (function() {
         if (!gameOver) {
             if (cardsInPlay[player1.name].recentCard().value() > cardsInPlay[player2.name].recentCard().value()) {
                 theWinnerIs(player1);
+                checkToContinue();
             } else if (cardsInPlay[player1.name].recentCard().value() < cardsInPlay[player2.name].recentCard().value()) {
                 theWinnerIs(player2);
+                checkToContinue();
             } else {
                 war();
             }
@@ -202,18 +260,25 @@ $(document).ready (function() {
     }
     
     function war() {
-        printNotification(player1.name + " plays " + cardsInPlay[player1.name].recentCard().description() + " and "
-                + player2.name + " plays " + cardsInPlay[player2.name].recentCard().description());
+        /*printNotification(player1.name + " plays " + cardsInPlay[player1.name].recentCard().description() + " and "
+               + player2.name + " plays " + cardsInPlay[player2.name].recentCard().description());*/
         printNotification("THIS MEANS WAR!");
-        // $("#next").text("Go to War");
-        // document.getElementById("next").addEventListener("click", function() { alert("you clicked it!"); }, false);
+        /*$('BODY').queue(function() {
+            $("#next").fadeOut(500, function() {
+                $(this).text(warCry).fadeIn(500, function() { $('BODY').dequeue(); });
+            });
+        });*/
+        unfadeButton("war");
+    }
+    
+    function goToWar() {
         takeTurnPlayingCards(player1, 2);
         takeTurnPlayingCards(player2, 2);
         chooseWinner();
     }
-    
+     
     // this function slowly prints the game notifications to the screen
-    function printNotification(message) {
+    function printNotification(message, attention) {
         // the combination of queue, setTimeout, and animate slow the loading text down
         // this is a combination of answers I found on the web
         // other combinations did not work
@@ -223,6 +288,10 @@ $(document).ready (function() {
                 elem.className = "notification";
                 elem.textContent = message;
                 elem.style.opacity = 0;
+                if (attention != null) {
+                    elem.style.fontWeight = "bold";
+                    elem.style.color = "red";
+                }
                 $("#content").prepend(elem);
                 $("#content div:first-child").animate( { opacity: 1 }, 750, function() { $('BODY').dequeue(); });
                 // the following code is one of the combinations that didn't work.
@@ -239,12 +308,15 @@ $(document).ready (function() {
             loser = player1;
         }
         
-        printNotification(winner.name + " wins with " + cardsInPlay[winner.name].recentCard().description()
-                + " versus " + cardsInPlay[loser.name].recentCard().description());
-        collectPot();
-        while (pot.notEmpty()) {
-            winner.take(pot.draw());
-            printNotification(winner.name + " gains " + winner.recentCard().description());
+        /*printNotification(winner.name + " wins with " + cardsInPlay[winner.name].recentCard().description()
+                + " versus " + cardsInPlay[loser.name].recentCard().description());*/
+        printNotification(winner.name + " wins!");
+        if (!loser.loses()) {
+            collectPot();
+            while (pot.notEmpty()) {
+                winner.take(pot.draw());
+                printNotification(winner.name + " gains " + winner.recentCard().description());
+            }
         }
         printNumCards();
     }
@@ -276,26 +348,37 @@ $(document).ready (function() {
     }
     
     function printLosingMessage(player) {
+        printNotification(player.name + " has run out of cards.");
         printNotification(player.name + " loses!");
         printNotification("GAME OVER");
+        unfadeButton("start");
     }
     
-    function askToContinue() {
+    function checkToContinue() {
         if (!gameOver) {
             if (player1.loses()) {
                 printLosingMessage(player1);
             } else if (player2.loses()) {
                 printLosingMessage(player2);
             } else {
-                // results += "<button onclick='doBattle()'>Play Next Turn</a>";
+                unfadeButton("battle");
             }
         }
     }
     
     dealCards();
+    printNumCards();
     
-    $("#buttons").append("<button id='next'>Battle</a>");
+    $("#buttons").append("<button id='next'>" + battleCry + "</a>");
     
-    document.getElementById("next").addEventListener("click", doBattle, false);
+    document.getElementById("next").addEventListener("click", next, false);
+    
+    window.onkeydown = function (e) {
+        var code = e.keyCode ? e.keyCode : e.which;
+        if (code === 13) { //enter key
+            next();
+        }
+    };
+
     
 });
