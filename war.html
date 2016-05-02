@@ -6,16 +6,16 @@
         <script src="war.js"></script>
         <style> 
             #main {
-                width: 500px;
-                margin-left: 100px;
+                width: 37ex;
+                margin-left: 20%;
             }
-            
+
             #buttons {
-                margin: 10px 0;
+                margin: 10px 0 20px;
             }
             
             #next {
-                width: 40%;
+                width: 100%;
                 margin: 0 auto;
                 display: block;
                 border: 1px solid #000;
@@ -42,16 +42,31 @@
             .scores {
                 margin: 10px;
             }
+            
+            .cards {
+                width: 9ex;
+                display: inline-block;
+                text-align: right;
+            }
+            
+            .sep {
+                width: 4ex;
+                display: inline-block;
+                text-align: center;
+            }
+            
         </style>
     </head>
     <body>
         <div id="main">
             <div id="counters">
-                <div class="scores">Player 1: <span id="player1cards"></span></div>
-                <div class="scores">Player 2: <span id="player2cards"></span></div>
+                <div class="scores">Player 1: <span id="player1cards" class="cards"></span> <span id="separator1" class="sep"></span> <span id="player1wins"></span></div>
+                <div class="scores">Player 2: <span id="player2cards" class="cards"></span> <span id="separator2" class="sep"></span> <span id="player2wins"></span></div>
             </div>
             <div id="buttons"></div>
-            <div id="content"></div>
+            <div id="content">
+                <div class="notification">Click button or hit "ENTER" to begin</div>
+            </div>
         </div>
     </body>
 </html>
