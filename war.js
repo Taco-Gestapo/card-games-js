@@ -36,6 +36,7 @@ $(document).ready (function() {
         }
     };
     
+    // define the Stack constructor
     var Stack = function() {
         this.cards = [];
     };
@@ -66,14 +67,14 @@ $(document).ready (function() {
     Stack.prototype.deckSize = function () {
         return this.cards.length;
     };
-
+    
     // remove a card from "top" of the deck
     // it's really being removed from the bottom, but that's okay as long as
     // it's not used for a player's stack
     Stack.prototype.draw = function() {
         return this.cards.pop();
     };
-
+    
     /**
      * Randomize array element order in-place.
      * Using Durstenfeld shuffle algorithm.
@@ -89,10 +90,12 @@ $(document).ready (function() {
     }
     
     // define the Deck constructor
+    // this class is for a deck of 52 cards
     function Deck () {
         Stack.call(this);
         this.suits = ["Hearts", "Diamonds", "Clubs", "Spades"];
         this.names = ["Ace", "2", "3", "4", "5", "6", "7", "8", "9", "10", "Jack", "Queen", "King"];
+        // populate the cards array
         for (var i = 0; i < this.suits.length; i++) {
             for (var j = 0; j < this.names.length; j++) {
                 this.cards[this.cards.length] = new Card(this.names[j], this.suits[i]);
@@ -132,8 +135,11 @@ $(document).ready (function() {
         return !this.stack.notEmpty();
     };
     
-    // all that mess above sets up the classes
-    // below here is where the game starts
+    /*
+     * all that mess above sets up the classes
+     * below here is where the game starts
+     *
+     */
     
     // set up the game
     var deck = new Deck();
@@ -150,8 +156,10 @@ $(document).ready (function() {
     wins[player1.name] = 0;
     wins[player2.name] = 0;
     var firstGame = true;
-
-
+    var forfeit = false;
+    var pausedState = "";
+    
+    
     // this resets variables for starting a new game
     function newGame() {
         deck = new Deck();
@@ -163,6 +171,7 @@ $(document).ready (function() {
         printNotification("The cards have been dealt!", 1);
         unfadeButton("battle");
         printNumCards();
+        forfeit = false;
     }
     
     // determines what needs to happen when the user clicks the button
@@ -184,26 +193,42 @@ $(document).ready (function() {
     // prevent user from activating button while text is printing
     function fadeButton() {
         state = "waiting";
-        document.getElementById("next").style.border = "1px solid #aaa";
-        document.getElementById("next").style.color = "#aaa";
+        fadeOneButton("next");
+        fadeOneButton("forfeit");
+    }
+    
+    function fadeOneButton(elem) {
+        var id = "#" + elem;
+        document.getElementById(elem).style.border = "1px solid #aaa";
+        document.getElementById(elem).style.color = "#aaa";
+        // disable the box-shadow on hover
+        $(id).css("box-shadow", "0 0 1px rgba(0, 0, 0, 0)");
+    }
+    
+    function unfadeOneButton(elem) {
+        var id = "#" + elem;
+        document.getElementById(elem).style.border = "1px solid #000";
+        document.getElementById(elem).style.color = "#000";
+        $(id).css("box-shadow", "");
     }
     
     function unfadeButton(newState) {
         $('BODY').queue(function() {
-            document.getElementById("next").style.border = "1px solid #000";
-            document.getElementById("next").style.color = "#000";
+            unfadeOneButton("next");
             if (newState == "battle") {
                 if ($("#next").text() != battleCry) {
                     $("#next").fadeOut(500, function() {
                         $(this).text(battleCry).fadeIn(500);
                     });
                 }
+                unfadeOneButton("forfeit");
              } else if (newState == "war") {
                 if ($("#next").text() != warCry) {
                     $("#next").fadeOut(500, function() {
                         $(this).text(warCry).fadeIn(500);
                     });
                 }
+                unfadeOneButton("forfeit");
              } else if (newState == "start") {
                 $("#next").fadeOut(500, function() {
                     $(this).text(newCry).fadeIn(500);
@@ -325,7 +350,7 @@ $(document).ready (function() {
         printNumCards();
     }
     
-    // updates the scoreboard
+    // updates the scoreboard with the number of cards each player has
     function printNumCards() {
         $('BODY').queue(function() {
             $("#player1cards").fadeOut(500, function() {
@@ -337,7 +362,7 @@ $(document).ready (function() {
         });
     }
     
-    // updates the scoreboard
+    // updates the scoreboard with the number of wins
     function printNumWins() {
         if (firstGame) {
             $('BODY').queue(function() {
@@ -375,7 +400,7 @@ $(document).ready (function() {
         pot = new Stack();
         grabCardsFrom(player1);
         grabCardsFrom(player2);
-        shuffleArray(pot);
+        shuffleArray(pot.cards);
     }
     
     function grabCardsFrom(player) {
@@ -385,7 +410,9 @@ $(document).ready (function() {
     }
     
     function printLosingMessage(player) {
-        printNotification(player.name + " has run out of cards.");
+        if (!forfeit) {
+            printNotification(player.name + " has run out of cards.");
+        }
         printNotification(player.name + " loses!");
         printNotification("GAME OVER");
         unfadeButton("start");
@@ -397,6 +424,7 @@ $(document).ready (function() {
         printNumWins();
     }
     
+    // only continues the game if neither player has run out of cards
     function checkToContinue() {
         if (!gameOver) {
             if (player1.loses()) {
@@ -409,20 +437,83 @@ $(document).ready (function() {
         }
     }
     
+    // the pop-up asking the player if they really truly definitely want to forfeit the game
+    function forfeitConfirm() {
+        if (state != "waiting" && state != "start") {
+            pausedState = state;
+            fadeButton();
+            $('#confirm').reveal({
+                animation: 'fade',
+                animationspeed: 300,                       //how fast animtions are
+                closeonbackgroundclick: false,             //if you click background will modal close?
+                dismissmodalclass: 'close-reveal-modal'    //the class of a button or element that will close an open modal
+            });
+        }
+    }
+    
+    // resumes the game if the forfeit is cancelled
+    function cancel() {
+        unfadeButton(pausedState);
+        pausedState = "";
+    }
+    
+    function forfeitGame() {
+        forfeit = true;
+        printNotification("Player 1 forfeits the game.", 1);
+        printLosingMessage(player1);
+    }
+    
+    // disable hover state if it's a touch screen
+    var is_touch_device = 'ontouchstart' in document.documentElement;
+    if (is_touch_device) {
+        $('body').removeClass('notouch');
+    }
+    
     dealCards();
     printNumCards();
     
-    $("#buttons").prepend("<button id='next'>" + battleCry + "</a>");
-    
+    $("#buttons").prepend("<button id='next' class='hvr-glow'>" + battleCry + "</a>");
     document.getElementById("next").addEventListener("click", next, false);
     
-    // actives the button if user hits "enter"
+    $("#fbutton").prepend("<button id='forfeit' class='hvr-glow'>Forfeit</a>");
+    document.getElementById("forfeit").addEventListener("click", forfeitConfirm, false);
+    
+    // event listeners for the buttons on the confirmation pop-up
+    document.getElementById("yup").addEventListener("click", forfeitGame, false);
+    document.getElementById("nope").addEventListener("click", cancel, false);
+    
+    // activates the "next" button if user hits "enter"
     window.onkeydown = function (e) {
         var code = e.keyCode ? e.keyCode : e.which;
         if (code === 13) { //enter key
             next();
         }
     };
-
     
+    // Resize Part 1: to be honest, I'm not sure if this works well enough to justify keeping it around
+    // what it's supposed to do: prevent the scrollbar from popping up by setting the div's height
+    var max = $(document).height() - $('#content').offset().top;
+    max -= 10;
+    $('#content').css('max-height', max);
+    
+    
+    // prints instructions, because it's not obvious hitting ENTER would advance the game.
+    // I tried the tooltip thing, but it's annoying to see it pop up with every hover. this is a nicer solution.
+    printNotification("Click button or hit ENTER to begin");
+    
+    
+    // Resize Part 2: I'm even less sure that this works well enough to justify keeping it around
+    // what it sometimes does: resizes the notification area as needed to be as big as possible with no scrollbar
+    // marcuspope.com/better-resize-event-handler
+    var timer_id;
+    
+    $(window).resize(function() {
+        clearTimeout(timer_id);
+        timer_id = setTimeout(function() {
+            var newMax = $(document).height() - $('#content').offset().top;
+            newMax -= 10;
+            $('#content').css('max-height', newMax);
+        }, 300);
+    });
+
 });
