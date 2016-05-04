@@ -5,10 +5,19 @@ $(document).ready (function() {
     var Card = function(name, suit) {
         this.name = name;
         this.suit = suit;
+        if (suit == "Hearts") {
+            this.symbol = "\u2665";
+        } else if (suit == "Diamonds") {
+            this.symbol = "\u2666";
+        } else if (suit == "Clubs") {
+            this.symbol = "\u2663";
+        } else {
+            this.symbol = "\u2660";
+        }
     };
     
     Card.prototype.description = function() {
-        return "the " + this.name + " of " + this.suit;
+        return "the " + this.name + " of " + this.suit + " " + this.symbol;
     };
     
     // return the integer value of the card
@@ -23,7 +32,7 @@ $(document).ready (function() {
             case "A":
                 return 14;
             default:
-                return parseInt(this.name);
+                return parseInt(this.name, 10);
         }
     };
     
@@ -34,17 +43,17 @@ $(document).ready (function() {
     // remove a card from the top of the stack
     Stack.prototype.playCard = function() {
         return this.cards.shift();
-    }
+    };
     
     // add a card to the bottom of the stack
     Stack.prototype.take = function(card) {
         this.cards[this.cards.length] = card;
-    }
+    };
     
     // returns the card most recently added to the stack
     Stack.prototype.recentCard = function() {
         return this.cards[this.cards.length - 1];
-    }
+    };
     
     Stack.prototype.notEmpty = function() {
         if (this.cards.length == 0) {
@@ -79,7 +88,6 @@ $(document).ready (function() {
         return array;
     }
     
-    // it looks like it's easier to make Deck a child of Stack
     // define the Deck constructor
     function Deck () {
         Stack.call(this);
@@ -90,7 +98,6 @@ $(document).ready (function() {
                 this.cards[this.cards.length] = new Card(this.names[j], this.suits[i]);
             }
         }
-        // I added the shuffle here, because why not
         shuffleArray(this.cards);
     }
     
@@ -134,21 +141,23 @@ $(document).ready (function() {
     var player2 = new Player("Player 2");
     var cardsInPlay = {};
     var pot;
-    var results = "";
     var gameOver = false;
     var state = "battle";
     var battleCry = "battle";
     var warCry = "Go to War";
     var newCry = "Play Again";
+    var wins = {};
+    wins[player1.name] = 0;
+    wins[player2.name] = 0;
+    var firstGame = true;
 
 
-    // this is for starting a new game
+    // this resets variables for starting a new game
     function newGame() {
         deck = new Deck();
         player1 = new Player("Player 1");
         player2 = new Player("Player 2");
         cardsInPlay = {};
-        results = "";
         gameOver = false;
         dealCards();
         printNotification("The cards have been dealt!", 1);
@@ -172,6 +181,7 @@ $(document).ready (function() {
         }
     }
     
+    // prevent user from activating button while text is printing
     function fadeButton() {
         state = "waiting";
         document.getElementById("next").style.border = "1px solid #aaa";
@@ -205,22 +215,22 @@ $(document).ready (function() {
     }
     
     function dealCards() {
-        player2.take(deck.draw());
         while(deck.notEmpty()) {
             player1.take(deck.draw());
-            
+            player2.take(deck.draw());
         }
     }
     
+    // resets variables for new battle
     function newBattle() {
         cardsInPlay = {};
         cardsInPlay[player1.name] = new Stack();
         cardsInPlay[player2.name] = new Stack();
-        results = "";
     }
     
     function takeTurnPlayingCards(player, num) {
-        while (num > 0) {
+        while (num > 0 && !gameOver) {
+            // check if player is out of cards first
             if (player.loses()) {
                 gameOver = true;
                 printNumCards();
@@ -229,6 +239,7 @@ $(document).ready (function() {
             } else {
                 cardsInPlay[player.name].take(player.playCard());
                 if (num > 1) {
+                    // for the first card played while at war
                     printNotification(player.name + " lays one card face down.");
                 } else {
                     printNotification(player.name + " plays " + cardsInPlay[player.name].recentCard().description());
@@ -260,18 +271,13 @@ $(document).ready (function() {
     }
     
     function war() {
-        /*printNotification(player1.name + " plays " + cardsInPlay[player1.name].recentCard().description() + " and "
-               + player2.name + " plays " + cardsInPlay[player2.name].recentCard().description());*/
         printNotification("THIS MEANS WAR!");
-        /*$('BODY').queue(function() {
-            $("#next").fadeOut(500, function() {
-                $(this).text(warCry).fadeIn(500, function() { $('BODY').dequeue(); });
-            });
-        });*/
         unfadeButton("war");
     }
     
     function goToWar() {
+        // two cards are played during war:
+        // the first face down, the second face up
         takeTurnPlayingCards(player1, 2);
         takeTurnPlayingCards(player2, 2);
         chooseWinner();
@@ -294,8 +300,6 @@ $(document).ready (function() {
                 }
                 $("#content").prepend(elem);
                 $("#content div:first-child").animate( { opacity: 1 }, 750, function() { $('BODY').dequeue(); });
-                // the following code is one of the combinations that didn't work.
-                //$(".notification").delay(1000).fadeIn("slow", function() { $('BODY').dequeue(); });
             }, 700);
         });
     }
@@ -308,32 +312,65 @@ $(document).ready (function() {
             loser = player1;
         }
         
-        /*printNotification(winner.name + " wins with " + cardsInPlay[winner.name].recentCard().description()
-                + " versus " + cardsInPlay[loser.name].recentCard().description());*/
         printNotification(winner.name + " wins!");
-        if (!loser.loses()) {
-            collectPot();
-            while (pot.notEmpty()) {
-                winner.take(pot.draw());
+        
+        collectPot();
+        while (pot.notEmpty()) {
+            winner.take(pot.draw());
+            // don't print out this mess if one of the players is already out of cards
+            if (!loser.loses()) {
                 printNotification(winner.name + " gains " + winner.recentCard().description());
             }
         }
         printNumCards();
     }
     
+    // updates the scoreboard
     function printNumCards() {
-        //printNotification(player1.name + " has " + player1.numCards() + " cards.");
-        //printNotification(player2.name + " has " + player2.numCards() + " cards.");
         $('BODY').queue(function() {
             $("#player1cards").fadeOut(500, function() {
-                $(this).text(player1.numCards() + " cards").fadeIn(500);
+                $(this).text(player1.numCards() + ((player1.numCards() == 1) ? " card\u00A0" : " cards")).fadeIn(500);
             });
             $("#player2cards").fadeOut(500, function() {
-                $(this).text(player2.numCards() + " cards").fadeIn(500, function() { $('BODY').dequeue(); });
+                $(this).text(player2.numCards() + ((player2.numCards() == 1) ? " card\u00A0" : " cards")).fadeIn(500, function() { $('BODY').dequeue(); });
             });
         });
     }
     
+    // updates the scoreboard
+    function printNumWins() {
+        if (firstGame) {
+            $('BODY').queue(function() {
+                $("#separator1").fadeIn(500, function() {
+                    $(this).text("/").fadeIn(500);
+                });
+                $("#separator2").fadeIn(500, function() {
+                    $(this).text("/").fadeIn(500);
+                });
+                $("#player1wins").fadeIn(500, function() {
+                    $(this).text(wins[player1.name] + ((wins[player1.name] == 1) ? " win" : " wins")).fadeIn(500);
+                });
+                $("#player2wins").fadeIn(500, function() {
+                    $(this).text(wins[player2.name] + ((wins[player2.name] == 1) ? " win" : " wins")).fadeIn(500, function() { $('BODY').dequeue(); });
+                });
+            });
+            firstGame = false;
+        } else {
+            $('BODY').queue(function() {
+                if (player2.loses()) {
+                    $("#player1wins").fadeOut(500, function() {
+                        $(this).text(wins[player1.name] + ((wins[player1.name] == 1) ? " win" : " wins")).fadeIn(500, function() { $('BODY').dequeue(); });
+                    });
+                } else {
+                    $("#player2wins").fadeOut(500, function() {
+                        $(this).text(wins[player2.name] + ((wins[player2.name] == 1) ? " win" : " wins")).fadeIn(500, function() { $('BODY').dequeue(); });
+                    });
+                }
+            });
+        }
+    }
+    
+    // add all cards in play to a "pot" and shuffle the pot
     function collectPot() {
         pot = new Stack();
         grabCardsFrom(player1);
@@ -352,6 +389,12 @@ $(document).ready (function() {
         printNotification(player.name + " loses!");
         printNotification("GAME OVER");
         unfadeButton("start");
+        if (player.name == player1.name) {
+            wins[player2.name] += 1;
+        } else {
+            wins[player1.name] += 1;
+        }
+        printNumWins();
     }
     
     function checkToContinue() {
@@ -369,10 +412,11 @@ $(document).ready (function() {
     dealCards();
     printNumCards();
     
-    $("#buttons").append("<button id='next'>" + battleCry + "</a>");
+    $("#buttons").prepend("<button id='next'>" + battleCry + "</a>");
     
     document.getElementById("next").addEventListener("click", next, false);
     
+    // actives the button if user hits "enter"
     window.onkeydown = function (e) {
         var code = e.keyCode ? e.keyCode : e.which;
         if (code === 13) { //enter key
