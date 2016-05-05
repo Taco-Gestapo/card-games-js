@@ -2,8 +2,14 @@
 <html lang="en-us">
     <head>
         <title>War: The Game</title>
-        <script src="scripts/jquery-1.7.1.min.js"></script>
+        <script src="https://ajax.googleapis.com/ajax/libs/jquery/2.1.4/jquery.min.js"></script>
+        <script>if (typeof jQuery === 'undefined') {
+          document.write(unescape('%3Cscript%20src%3D%22/scripts/jquery-2.1.4.min.js%22%3E%3C/script%3E'));
+        }
+        </script>
+        <script src="scripts/jquery.reveal.js"></script>
         <script src="war.js"></script>
+        <link rel="stylesheet" href="styles/reveal.css">
         <style> 
             #main {
                 width: 37ex;
@@ -14,19 +20,28 @@
                 margin: 10px 0 20px;
             }
             
-            #next {
+            #fbutton {
+                margin: 10px 0;
+            }
+            
+            #next,
+            #forfeit,
+            #yup, #nope {
                 width: 100%;
                 margin: 0 auto;
                 display: block;
-                border: 1px solid #000;
                 padding: 5px;
                 background-color: #fff;
                 font-size: 105%;
                 text-transform: lowercase;
                 font-family: "Times New Roman";
                 outline: none;
-                -webkit-transition: border .3s, color .3s;
-                transition: border .3s, color .3s;
+                border: 1px solid #000;
+            }
+            
+            #next, #forfeit {
+                -webkit-transition: border .3s, color .3s, box-shadow .3s;
+                transition: border .3s, color .3s, box-shadow .3s;
             }
         
             .notification {
@@ -55,17 +70,80 @@
                 text-align: center;
             }
             
+            #dbutton {
+                display: inline-block;
+            }
+            
+            #yup, #nope {
+                width: 15ex;
+                text-transform: none;
+            }
+            
+            #content {
+                overflow: hidden;
+            }
+
+            /*!
+             * Hover.css (http://ianlunn.github.io/Hover/)
+             * Version: 2.0.2
+             * Author: Ian Lunn @IanLunn
+             * Author URL: http://ianlunn.co.uk/
+             * Github: https://github.com/IanLunn/Hover
+             * Made available under a MIT License:
+             * http://www.opensource.org/licenses/mit-license.php
+             * Hover.css Copyright Ian Lunn 2014. Generated with Sass.
+             */
+             /* Glow */
+            .hvr-glow {
+                display: inline-block;
+                vertical-align: middle;
+                -webkit-transform: translateZ(0);
+                transform: translateZ(0);
+                box-shadow: 0 0 1px rgba(0, 0, 0, 0);
+                -webkit-backface-visibility: hidden;
+                backface-visibility: hidden;
+                -moz-osx-font-smoothing: grayscale;
+                -webkit-transition-duration: 0.3s;
+                transition-duration: 0.3s;
+                -webkit-transition-property: box-shadow;
+                transition-property: box-shadow;
+            }
+            
+            /* these are for the normal buttons*/
+            body.notouch .hvr-glow:hover {
+                box-shadow: 0 0 6px rgba(0, 0, 0, 0.3);
+            }
+            
+            body.notouch .hvr-glow:active, .hvr-glow:active {
+                box-shadow: 0 0 6px rgba(0, 0, 0, 0.7);
+            }
+            
+            /* these are for the buttons on the pop-up */
+            body.notouch .close-reveal-modal:hover {
+                box-shadow: 0 0 6px rgba(0, 0, 0, 0.5);
+            }
+            
+            body.notouch .close-reveal-modal:active, .close-reveal-modal:active {
+                box-shadow: 0 0 6px rgba(0, 0, 0, 0.9);
+            }
+
         </style>
     </head>
-    <body>
+    <body class="notouch">
         <div id="main">
+            <div id="confirm" class="reveal-modal">
+                <p>Are you sure you want to forfeit?</p>
+                <div id="dbutton"><button id="yup"  class="close-reveal-modal hvr-glow">Yes, I am</button></div>
+                <div id="dbutton"><button id="nope" class="close-reveal-modal hvr-glow">No</button></div>
+            </div>
+            <div id="fbutton"></div>
             <div id="counters">
                 <div class="scores">Player 1: <span id="player1cards" class="cards"></span> <span id="separator1" class="sep"></span> <span id="player1wins"></span></div>
                 <div class="scores">Player 2: <span id="player2cards" class="cards"></span> <span id="separator2" class="sep"></span> <span id="player2wins"></span></div>
             </div>
             <div id="buttons"></div>
             <div id="content">
-                <div class="notification">Click button or hit "ENTER" to begin</div>
+                <noscript>JavaScript is required to play this game.</noscript>
             </div>
         </div>
     </body>
